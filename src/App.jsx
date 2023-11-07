@@ -1,58 +1,76 @@
 import React from 'react';
 import './App.css';
 import { QueryClient, QueryClientProvider, useQuery } from "react-query";
+import { useState } from 'react';
 
-const schedule = {
-  "title": "CS Courses for 2018-2019",
-  "courses": {
-    "F101" : {
-      "id" : "F101",
-      "meets" : "MWF 11:00-11:50",
-      "title" : "Computer Science: Concepts, Philosophy, and Connections"
-    },
-    "F110" : {
-      "id" : "F110",
-      "meets" : "MWF 10:00-10:50",
-      "title" : "Intro Programming for non-majors"
-    },
-    "S313" : {
-      "id" : "S313",
-      "meets" : "TuTh 15:30-16:50",
-      "title" : "Tangible Interaction Design and Learning"
-    },
-    "S314" : {
-      "id" : "S314",
-      "meets" : "TuTh 9:30-10:50",
-      "title" : "Tech & Human Interaction"
-    }
-  }
+const fetchSchedule = async () => {
+  const url = "https://courses.cs.northwestern.edu/394/data/cs-courses.php";
+  const response = await fetch(url);
+  if (!response.ok) throw response;
+  return await response.json();
 };
-
-
 
 const Banner = ({ title }) => (
   <h1>{ title }</h1>
 );
 
-const CourseList = ({ courses }) => (
-  <div className='course-list'>
-    { Object.values(courses).map(course => <Course key={course.id} course={ course } />) }
+const TermButton = ({ term, checked, setTerm }) => {
+  console.log(term)
+  return (
+    <>
+    <input 
+      type='radio' 
+      id={term} 
+      className='btn-check'
+      autoComplete='off' 
+      checked={checked}
+      onChange={() => setTerm(term)}
+      />
+    <label className='btn btn-success m-1 p-2' htmlFor={term}>
+      { term }
+    </label>
+  </>
+  );
+};
+
+const TermSelector = ({ term, setTerm }) => {
+  console.log(term)
+  return (
+    <div className='btn-group'>
+    {
+      Object.values(terms).map(value => 
+        <TermButton key={value} term={value} checked={value === term}  setTerm={setTerm}/>)
+    }
   </div>
-);
+  );
+};
 
-const Main = ({ schedule }) => {
+const CourseList = ({ courses }) => {
+  const [term, setTerm] = useState('Fall');
+  const termCourses = Object.values(courses).filter(course => term === getCourseTerm(course)); 
 
-  // const {schedule: data, isLoading, error } = useQuery('schedule', fetchSchedule);
+  return (
+    <>
+      <TermSelector term={term} setTerm={setTerm} />
+        <div className='course-list'>
+          { termCourses.map(course => <Course key={course.id} course={course} />) }
+        </div>
+    </>
+  );
+};
 
-  // if (error) return <h1>{error}</h1>;
-  // if (isLoading) return <h1>Loading the schedule...</h1>; 
+const Main = () =>  {
+  const {data, isLoading, error } = useQuery('schedule', fetchSchedule);
+  
+  if (error) return <h1>{error}</h1>;
+  if (isLoading) return <h1>Loading the schedule...</h1>
 
-return (
-    <div className='container'>
-      <Banner title={ schedule.title } />
-      <CourseList courses={ schedule.courses } />
+  return (
+    <div className="container">
+      <Banner title={ data.title} />
+      <CourseList courses={ data.courses } />
     </div>
-);
+  );
 };
 
 const terms = { F: 'Fall', W: 'Winter', S: 'Spring'};
@@ -77,16 +95,9 @@ const Course = ({ course }) => (
   </div>
 );
 
-const fetchSchedule = async () => {
-  const url = `https://courses.cs.northwestern.edu/394/data/cs-courses.php`;
-  const response = await fetch(url); 
-  if (!response.ok) throw response;
-  return await response.json();
-};
-
 const App = () =>  (
   <QueryClientProvider client={queryClient}>
-    <Main schedule={schedule} />
+    <Main />
   </QueryClientProvider>
 );
 
